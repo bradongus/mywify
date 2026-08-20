@@ -26,7 +26,7 @@ def main():
     root, app_dir = sys.argv[1], sys.argv[2]
     lock = json.load(open(os.path.join(root, "package-lock.json")))
     pkgs = lock["packages"]
-    app_key = os.path.relpath(app_dir, root)
+    app_key = os.path.relpath(app_dir, root).replace(os.sep, "/")
     app = pkgs[app_key]
     queue = [(n, "node_modules") for n in (app.get("dependencies") or {})]
     copied = set()

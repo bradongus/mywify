@@ -45,7 +45,7 @@ jobs:
 
       - name: Publish C# hotspot helper
         working-directory: apps/hotshare-win/csharp
-        run: dotnet publish -c Release -r win-x64 --self-contained
+        run: dotnet publish -c Release -r win-x64 --self-contained -o publish
 
       - name: Build shared-core
         working-directory: packages/shared-core
@@ -66,7 +66,9 @@ jobs:
 
       - name: Build NSIS installer
         working-directory: apps/hotshare-win
-        run: npx electron-builder --win
+        # --publish never: electron-builder would auto-publish on a tag and
+        # fight the softprops release step below; it just assembles the exe.
+        run: npx electron-builder --win --publish never
 
       - name: Rename installer for stable download URL
         shell: bash
@@ -137,7 +139,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp apps/hotshare-android/app/build/outputs/apk/release/app-release.apk dist/hotshare.apk
+          # Without keystore secrets the release APK is unsigned and AGP names
+          # it app-release-unsigned.apk — accept either.
+          cp apps/hotshare-android/app/build/outputs/apk/release/app-release.apk dist/hotshare.apk \
+            || cp apps/hotshare-android/app/build/outputs/apk/release/app-release-unsigned.apk dist/hotshare.apk
           cp apps/hotshare-android/app/build/outputs/bundle/release/app-release.aab dist/hotshare.aab
 
       - uses: actions/upload-artifact@v4

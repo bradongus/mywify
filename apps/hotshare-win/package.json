@@ -34,12 +34,11 @@
       "allowToChangeInstallationDirectory": true
     },
     "files": [
-      "dist/**/*",
-      "csharp/**/*"
+      "dist/**/*"
     ],
     "extraResources": [
       {
-        "from": "csharp/",
+        "from": "csharp/publish/",
         "to": "csharp/"
       }
     ],
