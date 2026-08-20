@@ -8,6 +8,8 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.receive
+import io.ktor.server.request.path
+import io.ktor.server.request.local
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.serialization.kotlinx.json.*
@@ -32,7 +34,7 @@ class AdminServer(
     private val uplink: UplinkGuard,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val servers = mutableListOf<ApplicationEngine>()
+    private val servers = mutableListOf<EmbeddedServer<*, *>>()
 
     fun start() {
         val module: Application.() -> Unit = { routingModule() }
@@ -425,7 +427,7 @@ class AdminServer(
     // ── SPA serving ──────────────────────────────────────────────────────────
 
     private suspend fun serveSpa(call: ApplicationCall) {
-        val path = call.request.origin.path.joinToString("/")
+        val path = call.request.path()
         val safePath = path.replace("..", "").trimStart('/')
         val assetName = if (hasFileExtension(safePath)) safePath else "index.html"
 
