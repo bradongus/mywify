@@ -47,6 +47,10 @@ jobs:
         working-directory: apps/hotshare-win/csharp
         run: dotnet publish -c Release -r win-x64 --self-contained
 
+      - name: Build shared-core
+        working-directory: packages/shared-core
+        run: npm run build
+
       - name: Compile TypeScript
         working-directory: apps/hotshare-win
         run: npx tsc
