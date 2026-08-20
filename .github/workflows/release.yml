@@ -72,7 +72,7 @@ jobs:
 
       - name: Rename installer for stable download URL
         shell: bash
-        working-directory: apps/hotshare-win/release
+        working-directory: apps/hotshare-win/dist
         run: |
           shopt -s nullglob
           for f in *.exe; do
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: apps/hotshare-win/release/hotshare-setup.exe
+          path: apps/hotshare-win/dist/hotshare-setup.exe
 
   build-android:
     name: Android APK + AAB
