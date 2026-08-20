@@ -37,12 +37,12 @@ class AdminServer(
     fun start() {
         val module: Application.() -> Unit = { routingModule() }
         try {
-            servers += embeddedServer(Netty, port = 8080, host = "127.0.0.1", module = module).start(wait = false)
+            servers.add(embeddedServer(Netty, port = 8080, host = "127.0.0.1", module = module).start(wait = false))
         } catch (e: Exception) {
             Log.e(TAG, "Dashboard server failed to start", e)
         }
         try {
-            servers += embeddedServer(Netty, port = 80, host = "0.0.0.0", module = module).start(wait = false)
+            servers.add(embeddedServer(Netty, port = 80, host = "0.0.0.0", module = module).start(wait = false))
         } catch (e: Exception) {
             Log.w(TAG, "Guest portal on :80 unavailable (${e.message}) — guests cannot reach the portal.")
         }
@@ -425,7 +425,7 @@ class AdminServer(
     // ── SPA serving ──────────────────────────────────────────────────────────
 
     private suspend fun serveSpa(call: ApplicationCall) {
-        val path = call.request.uri.substringBefore('?').trimStart('/')
+        val path = call.request.origin.path.joinToString("/")
         val safePath = path.replace("..", "").trimStart('/')
         val assetName = if (hasFileExtension(safePath)) safePath else "index.html"
 

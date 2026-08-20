@@ -199,7 +199,7 @@ class MainActivity : AppCompatActivity() {
         if (subscribePolling) return
         subscribePolling = true
         var waited = 0
-        while (coroutineContext.isActive && waited < 180_000) {
+        while (currentCoroutineContext().isActive && waited < 180_000) {
             delay(5_000)
             waited += 5_000
             entitlement.refresh()
