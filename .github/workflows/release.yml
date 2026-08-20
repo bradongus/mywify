@@ -1,0 +1,149 @@
+name: Release
+
+# Builds the Windows + Android installers and publishes them to a GitHub
+# Release on every tag. The website's download buttons resolve to
+# /releases/latest/download/{hotshare-setup.exe,hotshare.apk}, so artifacts
+# are renamed to exactly those filenames before upload.
+#
+# Secrets required (repo Settings -> Secrets and variables -> Actions):
+#   ANDROID_KEYSTORE_BASE64    base64 of release.keystore (signed release APK)
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+# Without them the Android job still succeeds but produces an UNSIGNED APK.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  NODE_VERSION: "20"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      # allow-scripts in the root package.json blocks Electron's postinstall,
+      # so the binary never downloads; fetch it explicitly.
+      - name: Download Electron binary
+        run: node node_modules/electron/install.js
+
+      - name: Publish C# hotspot helper
+        working-directory: apps/hotshare-win/csharp
+        run: dotnet publish -c Release -r win-x64 --self-contained
+
+      - name: Compile TypeScript
+        working-directory: apps/hotshare-win
+        run: npx tsc
+
+      - name: Build NSIS installer
+        working-directory: apps/hotshare-win
+        run: npx electron-builder --win
+
+      - name: Rename installer for stable download URL
+        shell: bash
+        working-directory: apps/hotshare-win/release
+        run: |
+          shopt -s nullglob
+          for f in *.exe; do
+            if [[ "$f" != "hotshare-setup.exe" ]]; then
+              mv "$f" "hotshare-setup.exe"
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: apps/hotshare-win/release/hotshare-setup.exe
+
+  build-android:
+    name: Android APK + AAB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # The preBuild task builds the admin SPA with vite, so the workspace must
+      # be installed before Gradle runs.
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Wrapper jar is not committed, so drive Gradle directly (AGP 8.7 needs
+      # Gradle >= 8.9; the repo pins 8.11.1).
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Decode release keystore (if configured)
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [[ -n "$KEYSTORE_B64" ]]; then
+            echo "$KEYSTORE_B64" | base64 --decode > apps/hotshare-android/app/release.keystore
+            echo "Keystore decoded."
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret - building an UNSIGNED release APK."
+          fi
+
+      - name: Build release APK + AAB
+        working-directory: apps/hotshare-android
+        env:
+          # storeFile falls back to app/release.keystore (written above); only
+          # the password/alias secrets are required to sign.
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle assembleRelease bundleRelease
+
+      - name: Copy artifacts for stable download URLs
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp apps/hotshare-android/app/build/outputs/apk/release/app-release.apk dist/hotshare.apk
+          cp apps/hotshare-android/app/build/outputs/bundle/release/app-release.aab dist/hotshare.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: dist/
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-windows, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: true

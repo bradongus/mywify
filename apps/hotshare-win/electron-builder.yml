@@ -1,0 +1,72 @@
+appId: com.hotshare.win
+productName: hotshare
+copyright: Copyright © 2026 hotshare
+
+directories:
+  output: release
+  buildResources: assets
+
+files:
+  - dist/**/*
+  - csharp/**/*
+  - "!node_modules/**/{test,__tests__,tests}/**"
+  - "!**/*.map"
+
+extraResources:
+  - from: bin/
+    to: bin/
+    filter:
+      - "wgcf-*"
+      - "wireguard-*.msi"
+  - from: csharp/bin/Release/net8.0-win-x64/publish/
+    to: csharp/
+    filter:
+      - "**/*.exe"
+      - "**/*.dll"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+  publisherName: hotshare
+  legalTrademarks: hotshare
+  requestedExecutionLevel: requireAdministrator
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+  installerHeaderIcon: assets/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: hotshare
+  uninstallDisplayName: hotshare
+  installerLanguages:
+    - en_US
+  language: 1033
+
+  # Allow UAC elevation
+  manifestFile: nsis.manifest.json
+
+  # Custom install pages
+  include: nsis/custom-pages.nsh
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - universal
+  icon: assets/icon.icns
+  category: public.app-category.utilities
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: assets/icon.png
+  category: Network

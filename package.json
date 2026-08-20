@@ -1,0 +1,24 @@
+{
+  "name": "hotshare",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces",
+    "dev:spa": "npm run dev --workspace=packages/admin-spa",
+    "dev:website": "npm run dev --workspace=packages/website"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
+}

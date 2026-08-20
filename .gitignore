@@ -1,0 +1,27 @@
+node_modules/
+dist/
+build/
+out/
+*.log
+
+# Electron / app cache
+.cache/
+cache/
+
+# C# build output
+**/csharp/bin/
+**/csharp/obj/
+
+# SQLite / runtime state
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+runtime/
+state/
+
+# Secrets (never commit real keys)
+.env
+.env.*
+*.key.pem
+*.pem
