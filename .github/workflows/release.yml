@@ -55,6 +55,15 @@ jobs:
         working-directory: apps/hotshare-win
         run: npx tsc
 
+      # electron-builder + npm workspaces bug (#7103): "installing production
+      # dependencies" runs `npm install --production` inside the app dir, which
+      # prunes dev deps (app-builder-bin, electron-builder) from the workspace
+      # root and then dies with app-builder.exe ENOENT. Staging the app's prod
+      # deps into the app dir first makes installOrRebuild skip the install and
+      # only rebuild native modules (better-sqlite3 for Electron).
+      - name: Stage app production dependencies
+        run: python tools/stage-app-deps.py . apps/hotshare-win
+
       - name: Build NSIS installer
         working-directory: apps/hotshare-win
         run: npx electron-builder --win
