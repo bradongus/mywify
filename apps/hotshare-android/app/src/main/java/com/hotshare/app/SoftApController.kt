@@ -158,7 +158,7 @@ class SoftApController(private val context: Context) {
                 java.util.concurrent.Executor::class.java,
                 callbackClass
             )
-            registerMethod.invoke(wifiManager, { it.run() }, softApCallback)
+            registerMethod.invoke(wifiManager, java.util.concurrent.Executor { it.run() }, softApCallback)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register callback", e)
         }

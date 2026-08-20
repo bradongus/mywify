@@ -411,21 +411,21 @@ class AdminServer(
     private suspend fun resolveClientMac(call: ApplicationCall): String {
         val fromHeader = call.request.headers["X-Client-Mac"]?.trim()?.takeIf { it.isNotEmpty() }
         if (fromHeader != null) return fromHeader
-        val ip = call.request.origin.remoteAddress ?: return "unknown"
+        val ip = call.request.local.remoteAddress ?: return "unknown"
         // Live SoftAP client list is authoritative; billing history is a fallback.
         softAp.getClientByIp(ip)?.mac?.let { return it }
         return billing.macForIp(ip) ?: "unknown"
     }
 
     private fun isLocal(call: ApplicationCall): Boolean {
-        val ip = call.request.origin.remoteAddress ?: return false
+        val ip = call.request.local.remoteAddress ?: return false
         return ip == "127.0.0.1" || ip == "::1" || ip == "::ffff:127.0.0.1"
     }
 
     // ── SPA serving ──────────────────────────────────────────────────────────
 
     private suspend fun serveSpa(call: ApplicationCall) {
-        val path = call.request.path().trimStart('/')
+        val path = call.request.uri.substringBefore('?').trimStart('/')
         val safePath = path.replace("..", "").trimStart('/')
         val assetName = if (hasFileExtension(safePath)) safePath else "index.html"
 

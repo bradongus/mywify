@@ -228,7 +228,7 @@ class BillingEngine(context: Context) {
                 "isConnected" to connectedMacs.contains(c.mac.lowercase()),
                 "paid" to paid,
                 "expiresAt" to c.expiresAt?.let { iso(it) },
-                "planName" to plans[c.planId]?.name ?: "",
+                "planName" to (plans[c.planId]?.name ?: ""),
             )
         }
     }

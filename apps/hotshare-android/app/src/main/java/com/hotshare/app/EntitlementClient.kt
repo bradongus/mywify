@@ -26,7 +26,7 @@ class EntitlementClient(private val context: Context) {
     private var cached: Entitlement? = null
     private var lastCheck = 0L
 
-    private fun getDeviceId(): String {
+    fun getDeviceId(): String {
         val idFile = File(context.filesDir, "device.id")
         if (idFile.exists()) return idFile.readText().trim()
         val id = "android-${java.util.UUID.randomUUID()}"
@@ -96,8 +96,6 @@ class EntitlementClient(private val context: Context) {
         cached = null
         lastCheck = 0L
     }
-
-    fun getDeviceId(): String = getDeviceId()
 
     companion object {
         private const val TAG = "EntitlementClient"
