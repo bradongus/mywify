@@ -22,10 +22,14 @@
 -keep class android.net.wifi.SoftApConfiguration { *; }
 -keep class android.net.wifi.WifiManager$SoftApCallback { *; }
 
-# Suppress R8 warnings for Netty's optional/optional dependencies
+# Suppress R8 warnings for Netty's optional dependencies (not available on Android)
+-dontwarn io.netty.internal.tcnative.**
 -dontwarn org.apache.log4j.**
 -dontwarn org.apache.logging.log4j.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.eclipse.jetty.**
 -dontwarn reactor.blockhound.**
+
+# Ktor debug detector uses JMX (not available on Android)
+-dontwarn java.lang.management.**
