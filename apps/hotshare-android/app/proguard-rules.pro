@@ -33,3 +33,6 @@
 
 # Ktor debug detector uses JMX (not available on Android)
 -dontwarn java.lang.management.**
+
+# Ktor hot-reload uses JDK NIO watch service (not on Android)
+-dontwarn com.sun.nio.file.**
