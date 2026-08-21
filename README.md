@@ -1,19 +1,19 @@
-# hotshare
+# Hotshare — WiFi Sharing Platform (Educational Project)
 
-WiFi-sharing app that lets owners share their internet connection and charge clients via vouchers. Owners pay a monthly subscription to use the app (1-month free trial).
+A full-stack case study in building a multi-platform WiFi sharing application with payment integration, tunnel networking, and cross-platform desktop/mobile clients.
 
-## Revenue Model
+Built to demonstrate real-world patterns in: monorepo architecture, Electron + native Android development, Supabase backend, WireGuard tunneling, and payment gateway integration.
+
+> **Disclaimer:** This project is for educational and research purposes. Study the architecture, learn from the implementation, and apply the patterns to your own projects.
+
+## What This Project Demonstrates
 
 ```
 YOU ──(monthly subscription via Paystack)──► OWNER ──(vouchers)──► CLIENTS
 ```
 
-- **Tier 1 (your revenue):** Owners subscribe to hotshare via Paystack (M-Pesa/cards/PesaLink). 30-day free trial per device, then subscription required.
-- **Tier 2 (their revenue):** Owners set their own voucher plans and charge their connected clients however they like (M-Pesa, cash, etc.).
-
-## Why Uplink Guard
-
-Some ISPs enforce "one device" by rewriting all downlink reply TTLs to 1. This kills forwarded guest traffic (TTL≤1 → ICMP time-exceeded in the router's `ip_forward`). hotshare ships with a built-in WireGuard tunnel module that fixes this automatically.
+- **Tier 1 (platform owner revenue):** App owners subscribe via Paystack (M-Pesa/cards/PesaLink). 30-day free trial per device, then subscription required.
+- **Tier 2 (hotspot operator revenue):** Owners create voucher plans and charge connected clients (M-Pesa, cash, etc.).
 
 ## Architecture
 
@@ -22,7 +22,7 @@ hotshare/
 ├─ packages/
 │   ├─ shared-core/          # TypeScript: voucher spec, entitlement protocol, ledger types
 │   ├─ admin-spa/            # React/TypeScript: guest portal + owner admin + developer dashboard
-│   └─ website/              # React/TypeScript: public landing page (hotshare.vercel.app)
+│   └─ website/              # React/TypeScript: public landing page
 │
 ├─ apps/
 │   ├─ license-api/          # Supabase Edge Functions (Deno/TS) + Postgres
@@ -46,6 +46,30 @@ hotshare/
 | Payments (Tier 2) | On-device vouchers (payment-agnostic) |
 | Uplink Guard | WireGuard tunnel module |
 
+## Key Learning Topics
+
+### 1. ISP TTL Rewriting & WireGuard Tunnels
+
+Some ISPs enforce "one device" by rewriting all downlink reply TTLs to 1. This kills forwarded guest traffic (TTL≤1 → ICMP time-exceeded in the router's `ip_forward`). This project demonstrates a built-in WireGuard tunnel module that bypasses this restriction automatically.
+
+### 2. Cross-Platform Hotspot Management
+
+| Platform | Approach |
+|----------|----------|
+| **Windows** | C# WinRT wrapper (`NetworkOperatorTetheringManager`) + Electron |
+| **Android** | Kotlin reflection (`SoftApController`) + native Ktor server |
+
+### 3. Entitlement System Design
+
+- 30-day trial with 48-hour offline grace period
+- Device fingerprinting (hardware ID)
+- HMAC-signed voucher codes (`HS-XXXXXXXX` format)
+- Supabase Row Level Security for data isolation
+
+### 4. Monorepo Architecture
+
+npm workspaces with shared TypeScript packages, separate platform apps, and a unified build/release pipeline via GitHub Actions.
+
 ## Getting Started
 
 ### Prerequisites
@@ -53,7 +77,7 @@ hotshare/
 - Node.js ≥ 20
 - npm ≥ 10
 - Supabase account (free tier)
-- Paystack account (test mode, then live)
+- Paystack account (test mode)
 
 ### Install
 
@@ -101,7 +125,7 @@ Opens at `http://localhost:5174`.
 
 ### `@hotshare/shared-core`
 
-Zero-dependency TypeScript library. Provides:
+Zero-dependency TypeScript library demonstrating:
 - **Voucher code generation** (`HS-XXXXXXXX` format, HMAC-signed)
 - **Entitlement protocol** (30-day trial, 48h offline grace, subscription check)
 - **Ledger types** (Device, Plan, Voucher, Transaction, ConnectedClient)
@@ -124,31 +148,16 @@ React/TypeScript SPA. Three views:
 
 ### `@hotshare/website`
 
-React/TypeScript landing page. Single-page marketing site with:
-- **Hero section**: Download buttons for Windows + Android
-- **OS detection**: Automatically shows the right primary download button
-- **Dark theme**: Matches the admin-spa design system
+React/TypeScript landing page with OS detection and download buttons.
 
-Deployed to Vercel. Uses GitHub Releases for binary hosting.
+## Build Instructions
 
-## Build Phases
-
-- [x] **Phase 0:** Monorepo scaffold, shared-core, admin SPA, Supabase schema, tests
-- [x] **Phase 1:** License API (Supabase Edge Functions + Paystack integration)
-- [x] **Phase 2:** Windows MVP (Electron app + DNS interceptor + WireGuard)
-- [x] **Phase 3:** Android app (Kotlin + reflection SoftAP layer)
-- [x] **Phase 4:** Release packaging + build scripts
-
-## Release Build
-
-### Automated (GitHub Actions)
+### Release Build (GitHub Actions)
 
 Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds the
-Windows installer (`hotshare-setup.exe`) and the Android APK/AAB
-(`hotshare.apk` / `hotshare.aab`) and attaches them to a draft GitHub Release —
-the website's download buttons resolve straight to those URLs.
+Windows installer and Android APK/AAB, then attaches them to a draft GitHub Release.
 
-Repo secrets required for a **signed** Android build:
+**Android signing secrets** (optional — without them the APK is unsigned):
 
 | Secret | Purpose |
 |---|---|
@@ -156,8 +165,6 @@ Repo secrets required for a **signed** Android build:
 | `ANDROID_KEYSTORE_PASSWORD` | keystore password |
 | `ANDROID_KEY_ALIAS` | signing key alias |
 | `ANDROID_KEY_PASSWORD` | key password |
-
-Without them the Android job still succeeds but emits an unsigned APK.
 
 ### Windows Installer (manual)
 
@@ -173,9 +180,21 @@ bash tools/build-win.sh
 Requires: JDK 17, Android SDK 35.
 
 ```bash
-bash tools/build-android.sh
-# APK:  app/build/outputs/apk/release/app-release.apk
+cd apps/hotshare-android
+./gradlew assembleRelease bundleRelease
+# APK:  app/build/outputs/apk/release/app-release-unsigned.apk
 # AAB:  app/build/outputs/bundle/release/app-release.aab (for Play Store)
+```
+
+### Backend Configuration
+
+Pass project properties (they land in `BuildConfig`):
+
+```bash
+gradle assembleDebug \
+  -PHOTSHARE_SUPABASE_URL=https://your-project.supabase.co \
+  -PHOTSHARE_SUPABASE_ANON_KEY=your-anon-key \
+  -PHOTSHARE_VOUCHER_SECRET=your-shared-secret
 ```
 
 ### Deploy License API
@@ -185,62 +204,9 @@ export SUPABASE_PROJECT_REF=your-project-id
 bash tools/deploy-api.sh
 ```
 
-### WARP Preset (optional, test Cloudflare ToS first)
+## Component Deep Dive
 
-```bash
-python3 tools/generate-warp.py --output configs/warp.conf
-```
-
-## Android App — Build Instructions
-
-The Android app builds on Kali (or any machine with Android SDK). Prerequisites: Android SDK 35, JDK 17, Gradle 8.11+, and Node.js ≥ 20 (the preBuild task compiles the admin SPA with vite and bundles it into `assets/spa`).
-
-The gradle wrapper jar is not committed, so drive Gradle directly (or let CI's `gradle/actions/setup-gradle` pick it up):
-
-```bash
-cd apps/hotshare-android
-gradle assembleDebug
-```
-
-APK output: `app/build/outputs/apk/debug/app-debug.apk`
-
-The SPA must be built first. If npm is available the build task runs
-`npm run build --workspace=@hotshare/admin-spa` automatically (it copies
-`apps/hotshare-win/src/renderer/public` into `app/src/main/assets/spa`); if npm
-is missing it falls back to the last pre-built copy and fails if there is none.
-
-### Backend configuration
-
-Pass project properties (they land in `BuildConfig` and the license/voucher code):
-
-```bash
-gradle assembleDebug \
-  -PHOTSHARE_SUPABASE_URL=https://your-project.supabase.co \
-  -PHOTSHARE_SUPABASE_ANON_KEY=your-anon-key \
-  -PHOTSHARE_VOUCHER_SECRET=your-shared-secret
-```
-
-`HOTSHARE_VOUCHER_SECRET` must match `packages/shared-core` so vouchers issued
-on desktop redeem on Android and vice versa. It defaults to
-`hotshare-dev-secret-change-in-prod`.
-
-### Signing a release
-
-```bash
-gradle assembleRelease bundleRelease
-```
-
-Set the env vars below (or use the GitHub Actions secrets) — without
-`KEYSTORE_PASSWORD` the release build produces an **unsigned** APK:
-
-```bash
-export KEYSTORE_PATH=/path/to/release.keystore   # defaults to app/release.keystore
-export KEYSTORE_PASSWORD=...                     # enables signing
-export KEY_ALIAS=...
-export KEY_PASSWORD=...
-```
-
-### What runs on the phone
+### Android — What Runs on the Phone
 
 | Component | When | What it does |
 |---|---|---|
@@ -260,42 +226,15 @@ On first launch, the app checks:
 2. `SoftApCapability.areFeaturesSupported(SOFTAP_FEATURE_CLIENT_FORCE_DISCONNECT)` — can we force-disconnect clients?
 3. Max supported clients
 
-If force-disconnect is unsupported, the sweeper blocks unpaid clients instead
-(they stay connected until they drop; a future release will rotate the hotspot
-password to kick everyone).
-
 ### Uplink Guard on Android
 
 Unlike the desktop app there is no iptables egress to swap: the OS tethering NAT
 owns the default route, so when the tunnel is up guests ride it and when it
 fails back guests fall through to mobile data. The health monitor (probe
 `https://1.1.1.1` through the tunnel + WireGuard handshake age) still runs the
-reset → rotate → failback → restore ladder. The first enable opens the Android
-VPN permission dialog; the tunnel is brought up automatically after you accept.
+reset → rotate → failback → restore ladder.
 
-## Windows App — Build Instructions
-
-The Windows app runs on the **user's Windows machine** (not Kali). Prerequisites: Node.js ≥ 20, .NET 8 SDK, Visual Studio or MSBuild.
-
-```bash
-cd apps/hotshare-win
-npm install
-npx tsc
-npx electron-builder --win
-```
-
-### C# Hotspot Helper
-
-The C# helper wraps WinRT `NetworkOperatorTetheringManager` for hotspot control. Build separately:
-
-```bash
-cd apps/hotshare-win/csharp
-dotnet publish -c Release -r win-x64
-```
-
-The compiled `HotshareHelper.exe` is placed in `csharp/bin/Release/net8.0/` and bundled by electron-builder.
-
-### What runs on your machine
+### Windows — What Runs on the Machine
 
 | Component | When | What it does |
 |---|---|---|
@@ -307,29 +246,15 @@ The compiled `HotshareHelper.exe` is placed in `csharp/bin/Release/net8.0/` and 
 | Uplink Guard (WireGuard) | Optional | Tunnel for hostile ISP networks |
 | C# helper (WinRT) | Start/stop | Hotspot start/stop + client list |
 
-## Quick Start (for testing on your own machine)
+## Database Schema
 
-```bash
-# 1. Install
-npm install
+See `supabase/migrations/001_initial_schema.sql` for the full PostgreSQL schema with Row Level Security policies. Key tables:
 
-# 2. Run shared-core tests
-npm test
-
-# 3. Run admin SPA (dev)
-npm run dev:spa
-# Opens http://localhost:5173
-
-# 4. Deploy license API (needs Supabase project)
-export SUPABASE_PROJECT_REF=your-project-id
-bash tools/deploy-api.sh
-
-# 5. Build Windows app (on Windows)
-bash tools/build-win.sh
-
-# 6. Build Android app (needs Android SDK)
-bash tools/build-android.sh
-```
+- **devices** — one row per installed app instance (fingerprinted by hardware ID)
+- **plans** — pricing tiers created by each hotspot owner
+- **vouchers** — HMAC-signed redemption codes
+- **transactions** — payment log (subscription + voucher types)
+- **connected_clients** — synced from device for admin visibility
 
 ## Costs
 
@@ -342,4 +267,4 @@ bash tools/build-android.sh
 
 ## License
 
-Private — not for distribution.
+This project is for educational and research purposes. Study the architecture, learn from the implementation, and apply the patterns to your own projects.
