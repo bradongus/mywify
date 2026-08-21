@@ -82,6 +82,20 @@ android {
         viewBinding = true
         buildConfig = true
     }
+
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/io.netty.versions.properties"
+            excludes += "META-INF/native-image/**"
+            excludes += "META-INF/*.json"
+            excludes += "META-INF/versions/**"
+        }
+    }
 }
 
 dependencies {
