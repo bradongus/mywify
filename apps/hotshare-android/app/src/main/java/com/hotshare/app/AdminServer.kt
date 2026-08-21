@@ -9,7 +9,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.receive
 import io.ktor.server.request.path
-import io.ktor.server.request.local
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.serialization.kotlinx.json.*
@@ -413,14 +412,14 @@ class AdminServer(
     private suspend fun resolveClientMac(call: ApplicationCall): String {
         val fromHeader = call.request.headers["X-Client-Mac"]?.trim()?.takeIf { it.isNotEmpty() }
         if (fromHeader != null) return fromHeader
-        val ip = call.request.local.remoteAddress ?: return "unknown"
+        val ip = call.request.local.remoteAddress.ifBlank { return "unknown" }
         // Live SoftAP client list is authoritative; billing history is a fallback.
         softAp.getClientByIp(ip)?.mac?.let { return it }
         return billing.macForIp(ip) ?: "unknown"
     }
 
     private fun isLocal(call: ApplicationCall): Boolean {
-        val ip = call.request.local.remoteAddress ?: return false
+        val ip = call.request.local.remoteAddress.ifBlank { return false }
         return ip == "127.0.0.1" || ip == "::1" || ip == "::ffff:127.0.0.1"
     }
 
