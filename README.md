@@ -1,19 +1,19 @@
 # Hotshare — WiFi Sharing Platform (Educational Project)
 
-A full-stack case study in building a multi-platform WiFi sharing application with payment integration, tunnel networking, and cross-platform desktop/mobile clients.
+A full-stack case study in building a multi-platform WiFi sharing application with payment integration, networking modules, and cross-platform desktop/mobile clients.
 
-Built to demonstrate real-world patterns in: monorepo architecture, Electron + native Android development, Supabase backend, WireGuard tunneling, and payment gateway integration.
+Built to demonstrate real-world patterns in: monorepo architecture, Electron + native Android development, Supabase backend, and payment gateway integration.
 
 > **Disclaimer:** This project is for educational and research purposes. Study the architecture, learn from the implementation, and apply the patterns to your own projects.
 
 ## What This Project Demonstrates
 
-```
-YOU ──(monthly subscription via Paystack)──► OWNER ──(vouchers)──► CLIENTS
-```
-
-- **Tier 1 (platform owner revenue):** App owners subscribe via Paystack (M-Pesa/cards/PesaLink). 30-day free trial per device, then subscription required.
-- **Tier 2 (hotspot operator revenue):** Owners create voucher plans and charge connected clients (M-Pesa, cash, etc.).
+- Multi-platform monorepo with shared TypeScript packages
+- Electron desktop app with native system integrations
+- Android native app with Ktor embedded server
+- Supabase backend with Row Level Security
+- Payment gateway integration (Paystack)
+- Cross-device entitlement and licensing system
 
 ## Architecture
 
@@ -21,7 +21,7 @@ YOU ──(monthly subscription via Paystack)──► OWNER ──(vouchers)─
 hotshare/
 ├─ packages/
 │   ├─ shared-core/          # TypeScript: voucher spec, entitlement protocol, ledger types
-│   ├─ admin-spa/            # React/TypeScript: guest portal + owner admin + developer dashboard
+│   ├─ admin-spa/            # React/TypeScript: guest portal + owner admin
 │   └─ website/              # React/TypeScript: public landing page
 │
 ├─ apps/
@@ -42,31 +42,27 @@ hotshare/
 | Admin SPA hosting | Vercel (static React/TS) |
 | Windows app | Electron + React/TS + C# WinRT helper |
 | Android app | Native Kotlin + Room + Ktor + WebView |
-| Payments (Tier 1) | Paystack (M-Pesa STK push, cards, PesaLink) |
-| Payments (Tier 2) | On-device vouchers (payment-agnostic) |
-| Uplink Guard | WireGuard tunnel module |
+| Payments | Paystack (M-Pesa, cards, PesaLink) |
 
 ## Key Learning Topics
 
-### 1. ISP TTL Rewriting & WireGuard Tunnels
-
-Some ISPs enforce "one device" by rewriting all downlink reply TTLs to 1. This kills forwarded guest traffic (TTL≤1 → ICMP time-exceeded in the router's `ip_forward`). This project demonstrates a built-in WireGuard tunnel module that bypasses this restriction automatically.
-
-### 2. Cross-Platform Hotspot Management
+### 1. Cross-Platform Hotspot Management
 
 | Platform | Approach |
 |----------|----------|
-| **Windows** | C# WinRT wrapper (`NetworkOperatorTetheringManager`) + Electron |
-| **Android** | Kotlin reflection (`SoftApController`) + native Ktor server |
+| **Windows** | C# WinRT wrapper + Electron |
+| **Android** | Kotlin reflection + native Ktor server |
 
-### 3. Entitlement System Design
+Each platform handles hotspot creation, client management, and access control differently due to OS-level API differences.
 
-- 30-day trial with 48-hour offline grace period
-- Device fingerprinting (hardware ID)
-- HMAC-signed voucher codes (`HS-XXXXXXXX` format)
+### 2. Entitlement System Design
+
+- Trial period with offline grace window
+- Device fingerprinting
+- HMAC-signed voucher codes
 - Supabase Row Level Security for data isolation
 
-### 4. Monorepo Architecture
+### 3. Monorepo Architecture
 
 npm workspaces with shared TypeScript packages, separate platform apps, and a unified build/release pipeline via GitHub Actions.
 
@@ -126,29 +122,25 @@ Opens at `http://localhost:5174`.
 ### `@hotshare/shared-core`
 
 Zero-dependency TypeScript library demonstrating:
-- **Voucher code generation** (`HS-XXXXXXXX` format, HMAC-signed)
-- **Entitlement protocol** (30-day trial, 48h offline grace, subscription check)
+- **Voucher code generation** (HMAC-signed)
+- **Entitlement protocol** (trial, offline grace, subscription check)
 - **Ledger types** (Device, Plan, Voucher, Transaction, ConnectedClient)
-- **Payment adapter interface** (Paystack, manual code, SMS parser)
+- **Payment adapter interface**
 
 ```typescript
 import { generateCode, checkEntitlement, createTrialDevice } from '@hotshare/shared-core';
 
-const code = generateCode();           // "HS-7K2M9P1X"
+const code = generateCode();
 const device = createTrialDevice('mac-address');
-const entitlement = checkEntitlement(device); // { granted: true, status: 'trial', ... }
+const entitlement = checkEntitlement(device);
 ```
 
 ### `@hotshare/admin-spa`
 
 React/TypeScript SPA. Three views:
-- **Guest Portal** (`/`): Voucher entry page shown to connected clients
+- **Guest Portal** (`/`): Voucher entry page for connected clients
 - **Owner Admin** (`/admin/*`): Dashboard, clients, vouchers, plans, revenue, settings
-- **Developer Dashboard** (hosted separately on Vercel): Manage all devices and subscriptions
-
-### `@hotshare/website`
-
-React/TypeScript landing page with OS detection and download buttons.
+- **Developer Dashboard**: Manage all devices and subscriptions
 
 ## Build Instructions
 
@@ -172,7 +164,6 @@ Requires: Node.js ≥ 20, .NET 8 SDK on Windows.
 
 ```bash
 bash tools/build-win.sh
-# Output: apps/hotshare-win/release/hotshare Setup *.exe
 ```
 
 ### Android APK + AAB
@@ -182,8 +173,6 @@ Requires: JDK 17, Android SDK 35.
 ```bash
 cd apps/hotshare-android
 ./gradlew assembleRelease bundleRelease
-# APK:  app/build/outputs/apk/release/app-release-unsigned.apk
-# AAB:  app/build/outputs/bundle/release/app-release.aab (for Play Store)
 ```
 
 ### Backend Configuration
@@ -204,67 +193,47 @@ export SUPABASE_PROJECT_REF=your-project-id
 bash tools/deploy-api.sh
 ```
 
-## Component Deep Dive
+## Component Overview
 
-### Android — What Runs on the Phone
+### Android
 
-| Component | When | What it does |
-|---|---|---|
-| MainActivity | App open | Permissions + battery exemption, WebView admin + status display |
-| SoftApController | Start | Reflection: start hotspot, client list, allow/block |
-| SweeperService | Foreground | Every 10s: disconnect unpaid MACs (force-disconnect, else block) |
-| AdminServer (Ktor) | Always | Serves React admin SPA on 127.0.0.1:8080 + guest portal on :80 |
-| EntitlementClient | Every 6h | Checks license via Supabase API |
-| UplinkGuard | Optional | Built-in WireGuard tunnel (wg-go) + self-healing health monitor |
-| HotspotManager | Toggle | Capability check, entitlement gate, sweeper + tunnel wiring |
-| CapabilityDetector | App start | Checks STA+AP + force-disconnect support |
+| Component | Purpose |
+|---|---|
+| MainActivity | Permissions, WebView admin + status display |
+| SoftApController | Hotspot management, client list, allow/block |
+| SweeperService | Foreground service for access control |
+| AdminServer (Ktor) | Embedded HTTP server for admin + guest portal |
+| EntitlementClient | License verification via Supabase API |
+| UplinkGuard | Network tunnel module |
 
-### Capability Detection
+### Windows
 
-On first launch, the app checks:
-1. `WifiManager.isStaConcurrencyForLocalOnlyConnectionsSupported()` — can the device share WiFi while connected?
-2. `SoftApCapability.areFeaturesSupported(SOFTAP_FEATURE_CLIENT_FORCE_DISCONNECT)` — can we force-disconnect clients?
-3. Max supported clients
-
-### Uplink Guard on Android
-
-Unlike the desktop app there is no iptables egress to swap: the OS tethering NAT
-owns the default route, so when the tunnel is up guests ride it and when it
-fails back guests fall through to mobile data. The health monitor (probe
-`https://1.1.1.1` through the tunnel + WireGuard handshake age) still runs the
-reset → rotate → failback → restore ladder.
-
-### Windows — What Runs on the Machine
-
-| Component | When | What it does |
-|---|---|---|
-| Electron main process | App start | Orchestrates everything, system tray |
-| DNS interceptor (Node) | Hotspot on | All DNS → 192.168.137.1 (portal redirect) |
-| Firewall enforcer (netsh) | Hotspot on | Per-IP block for unpaid clients |
-| Portal server (Express) | Hotspot on | Guest portal on port 80, admin on 8080 |
-| Entitlement client | Every 6h | Checks license via Supabase API |
-| Uplink Guard (WireGuard) | Optional | Tunnel for hostile ISP networks |
-| C# helper (WinRT) | Start/stop | Hotspot start/stop + client list |
+| Component | Purpose |
+|---|---|
+| Electron main process | App orchestration, system tray |
+| Portal server (Express) | Guest portal + admin dashboard |
+| Entitlement client | License verification |
+| Uplink Guard | Network tunnel module |
+| C# helper (WinRT) | System-level hotspot control |
 
 ## Database Schema
 
-See `supabase/migrations/001_initial_schema.sql` for the full PostgreSQL schema with Row Level Security policies. Key tables:
+See `supabase/migrations/001_initial_schema.sql` for the PostgreSQL schema with Row Level Security. Key tables:
 
-- **devices** — one row per installed app instance (fingerprinted by hardware ID)
-- **plans** — pricing tiers created by each hotspot owner
-- **vouchers** — HMAC-signed redemption codes
-- **transactions** — payment log (subscription + voucher types)
-- **connected_clients** — synced from device for admin visibility
+- **devices** — installed app instances
+- **plans** — pricing tiers per owner
+- **vouchers** — signed redemption codes
+- **transactions** — payment log
+- **connected_clients** — synced from device
 
 ## Costs
 
 | Stage | Monthly Cost |
 |---|---|
 | Build + pilot | $0 (Supabase Free + Vercel Hobby) |
-| First paying owners | $0 (500K invocations ≈ ~3,300 devices) |
+| First paying owners | $0 (500K invocations) |
 | ~3,300 devices | $25 (Supabase Pro) |
-| 100,000 devices | ~$55 |
 
 ## License
 
-This project is for educational and research purposes. Study the architecture, learn from the implementation, and apply the patterns to your own projects.
+This project is for educational and research purposes.
