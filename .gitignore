@@ -12,6 +12,12 @@ cache/
 **/csharp/bin/
 **/csharp/obj/
 
+# Android / Gradle
+**/.gradle/
+**/build/
+apps/hotshare-android/app/build/
+local.properties
+
 # SQLite / runtime state
 *.db
 *.db-journal
