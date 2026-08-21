@@ -217,7 +217,7 @@ jobs:
           fi
 
       - name: Build release APK + AAB
-        working-directory: apps/hotshare-win/../../apps/hotshare-android
+        working-directory: apps/hotshare-android
         env:
           # storeFile falls back to app/release.keystore (written above); only
           # the password/alias secrets are required to sign.
