@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { detectPlatform, type Platform } from './platform';
 
-const WINDOWS_URL = 'https://github.com/YOUR_USER/hotshare/releases/latest/download/hotshare-setup.exe';
-const ANDROID_URL = 'https://github.com/YOUR_USER/hotshare/releases/latest/download/hotshare.apk';
-const LINUX_URL = 'https://github.com/YOUR_USER/hotshare/releases/latest/download/hotshare-0.1.0.AppImage';
-const MACOS_URL = 'https://github.com/YOUR_USER/hotshare/releases/latest/download/hotshare-0.1.0-universal.dmg';
+const WINDOWS_URL = 'https://github.com/bradongus/mywify/releases/latest/download/hotshare-setup.exe';
+const ANDROID_URL = 'https://github.com/bradongus/mywify/releases/latest/download/hotshare.apk';
+const LINUX_URL = 'https://github.com/bradongus/mywify/releases/latest/download/hotshare-0.1.0.AppImage';
+const MACOS_URL = 'https://github.com/bradongus/mywify/releases/latest/download/hotshare-0.1.0-universal.dmg';
 
 const PLATFORM_URLS: Record<Platform, string> = {
   windows: WINDOWS_URL,
