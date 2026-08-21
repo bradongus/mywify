@@ -45,7 +45,7 @@ ISP Network → Mirror Port/NetFlow → Detection API → Dashboard
 
 **Interested in deploying hotspot detection for your network?**
 
-- **Email:** [your-email@example.com]
+- **Email:** [bradongus@gmail.com]
 - **GitHub:** [github.com/bradongus/mywify](https://github.com/bradongus/mywify)
 
 ---
@@ -116,8 +116,7 @@ npm workspaces with shared TypeScript packages, separate platform apps, and a un
 
 - Node.js ≥ 20
 - npm ≥ 10
-- Supabase account (free tier)
-- Paystack account (test mode)
+- Supabase account 
 
 ### Install
 
