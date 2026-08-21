@@ -47,6 +47,9 @@ jobs:
         working-directory: apps/hotshare-win/csharp
         run: dotnet publish -c Release -r win-x64 --self-contained -o publish
 
+      - name: Build shared-core (types consumed by the app)
+        run: npm run build --workspace=@hotshare/shared-core
+
       - name: Compile TypeScript
         working-directory: apps/hotshare-win
         run: npx tsc
@@ -105,6 +108,9 @@ jobs:
       - name: Download Electron binary
         run: node node_modules/electron/install.js
 
+      - name: Build shared-core (types consumed by the app)
+        run: npm run build --workspace=@hotshare/shared-core
+
       - name: Compile TypeScript
         working-directory: apps/hotshare-win
         run: npx tsc
@@ -148,6 +154,9 @@ jobs:
 
       - name: Download Electron binary
         run: node node_modules/electron/install.js
+
+      - name: Build shared-core (types consumed by the app)
+        run: npm run build --workspace=@hotshare/shared-core
 
       - name: Compile TypeScript
         working-directory: apps/hotshare-win
