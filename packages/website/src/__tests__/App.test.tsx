@@ -13,9 +13,9 @@ describe('App', () => {
     expect(screen.getAllByText(/Turn any PC or phone/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders the accent text "paid WiFi hotspot"', () => {
+  it('renders the accent text "WiFi hotspot"', () => {
     render(<App />);
-    expect(screen.getAllByText('paid WiFi hotspot').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('WiFi hotspot').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders all four download buttons', () => {
@@ -59,14 +59,6 @@ describe('App', () => {
     expect(screen.getAllByText(/Windows, macOS, Linux, and Android/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/1-month free trial/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/No credit card required/).length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('renders mockup stats', () => {
-    render(<App />);
-    expect(screen.getAllByText('12').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('KES 4,800').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('99.8%').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('156').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders footer with copyright', () => {

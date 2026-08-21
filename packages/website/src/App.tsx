@@ -41,11 +41,11 @@ export default function App() {
           <div className="hero-content">
             <h1>
               Turn any PC or phone into a<br />
-              <span className="accent">paid WiFi hotspot</span>
+              <span className="accent">WiFi hotspot</span>
             </h1>
             <p className="hero-sub">
-              Share your internet. Earn money.<br />
-              Clients connect, pay via voucher, and browse. You keep the revenue.
+              Share your internet with others.<br />
+              Clients connect via voucher and browse.
             </p>
 
             <div className="download-group">
@@ -111,24 +111,6 @@ export default function App() {
                 <div className="mockup-header">
                   <span className="mockup-title">hotshare</span>
                   <span className="mockup-badge">Online</span>
-                </div>
-                <div className="mockup-grid">
-                  <div className="mockup-card">
-                    <div className="mockup-card-label">Connected</div>
-                    <div className="mockup-card-value">12</div>
-                  </div>
-                  <div className="mockup-card">
-                    <div className="mockup-card-label">Revenue</div>
-                    <div className="mockup-card-value accent">KES 4,800</div>
-                  </div>
-                  <div className="mockup-card">
-                    <div className="mockup-card-label">Uptime</div>
-                    <div className="mockup-card-value">99.8%</div>
-                  </div>
-                  <div className="mockup-card">
-                    <div className="mockup-card-label">Vouchers</div>
-                    <div className="mockup-card-value">156</div>
-                  </div>
                 </div>
               </div>
             </div>
