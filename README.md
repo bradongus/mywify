@@ -270,16 +270,10 @@ See `supabase/migrations/001_initial_schema.sql` for the PostgreSQL schema with 
 - **transactions** — payment log
 - **connected_clients** — synced from device
 
-## Costs
 
-| Stage | Monthly Cost |
-|---|---|
-| Build + pilot | $0 (Supabase Free + Vercel Hobby) |
-| First paying owners | $0 (500K invocations) |
-| ~3,300 devices | $25 (Supabase Pro) |
 
 ## License
 
 **Open Source:** This project is for educational and research purposes.
 
-**ISP Detection API:** Commercial licensing available for ISP providers. Contact [your-email@example.com] for pricing and deployment.
+
