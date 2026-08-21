@@ -6,6 +6,50 @@ Built to demonstrate real-world patterns in: monorepo architecture, Electron + n
 
 > **Disclaimer:** This project is for educational and research purposes. Study the architecture, learn from the implementation, and apply the patterns to your own projects.
 
+---
+
+## For ISP Providers
+
+**Are your customers sharing their WiFi with others?**
+
+Hotspot sharing costs ISPs revenue when one subscription serves multiple users. Current technical blocks (TTL rewriting) are increasingly ineffective as clients adopt tunneling solutions.
+
+### The Problem
+
+- One subscriber, dozens of hidden devices behind their connection
+- Revenue loss from unshared subscription fees
+- Network congestion from unmanaged traffic
+- Crude detection methods (TTL hacks) frustrate legitimate users
+
+### The Solution
+
+We provide ISPs with:
+
+- **Real-time hotspot detection** — Identify sharing activity per subscriber using TCP fingerprinting, User-Agent analysis, and traffic pattern recognition
+- **Device counting** — Know exactly how many devices are behind each connection
+- **Management dashboard** — Monitor, flag, and manage hotspot activity across your network
+- **API integration** — Connect to your existing billing and provisioning systems
+- **Policy enforcement** — Configure thresholds, alerts, and automated responses
+
+### How It Works
+
+```
+ISP Network → Mirror Port/NetFlow → Detection API → Dashboard
+                                                       ↓
+                                            Device Count + Alert
+                                            Billing Integration
+                                            Policy Enforcement
+```
+
+### Contact
+
+**Interested in deploying hotspot detection for your network?**
+
+- **Email:** [your-email@example.com]
+- **GitHub:** [github.com/bradongus/mywify](https://github.com/bradongus/mywify)
+
+---
+
 ## What This Project Demonstrates
 
 - Multi-platform monorepo with shared TypeScript packages
@@ -236,4 +280,6 @@ See `supabase/migrations/001_initial_schema.sql` for the PostgreSQL schema with 
 
 ## License
 
-This project is for educational and research purposes.
+**Open Source:** This project is for educational and research purposes.
+
+**ISP Detection API:** Commercial licensing available for ISP providers. Contact [your-email@example.com] for pricing and deployment.
