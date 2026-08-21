@@ -1,9 +1,9 @@
 name: Release
 
-# Builds the Windows + Android installers and publishes them to a GitHub
-# Release on every tag. The website's download buttons resolve to
-# /releases/latest/download/{hotshare-setup.exe,hotshare.apk}, so artifacts
-# are renamed to exactly those filenames before upload.
+# Builds the Windows + Linux + macOS installers and the Android APK/AAB, and
+# publishes them to a GitHub Release on every tag. Download buttons on the
+# website resolve to /releases/latest/download/{name}, so artifacts are renamed
+# to stable filenames before upload.
 #
 # Secrets required (repo Settings -> Secrets and variables -> Actions):
 #   ANDROID_KEYSTORE_BASE64    base64 of release.keystore (signed release APK)
@@ -47,20 +47,22 @@ jobs:
         working-directory: apps/hotshare-win/csharp
         run: dotnet publish -c Release -r win-x64 --self-contained -o publish
 
-      - name: Build shared-core
-        working-directory: packages/shared-core
-        run: npm run build
-
       - name: Compile TypeScript
         working-directory: apps/hotshare-win
         run: npx tsc
 
+      # Build the admin dashboard SPA into apps/hotshare-win/src/renderer/public
+      # (electron-builder bundles it from there). Without this the packaged app
+      # has no index.html and the dashboard shows "Not found".
+      - name: Build admin SPA
+        run: npm run build --workspace=packages/admin-spa
+
       # electron-builder + npm workspaces bug (#7103): "installing production
       # dependencies" runs `npm install --production` inside the app dir, which
-      # prunes dev deps (app-builder-bin, electron-builder) from the workspace
-      # root and then dies with app-builder.exe ENOENT. Staging the app's prod
-      # deps into the app dir first makes installOrRebuild skip the install and
-      # only rebuild native modules (better-sqlite3 for Electron).
+      # prunes the workspace root (electron-builder #7103) and then dies with
+      # app-builder.exe ENOENT. Staging the app's prod deps into the app dir
+      # first makes installOrRebuild skip the install and only rebuild native
+      # modules (better-sqlite3 for Electron).
       - name: Stage app production dependencies
         run: python tools/stage-app-deps.py . apps/hotshare-win
 
@@ -85,6 +87,95 @@ jobs:
         with:
           name: windows-installer
           path: apps/hotshare-win/dist/hotshare-setup.exe
+
+  build-linux:
+    name: Linux packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Download Electron binary
+        run: node node_modules/electron/install.js
+
+      - name: Compile TypeScript
+        working-directory: apps/hotshare-win
+        run: npx tsc
+
+      - name: Build admin SPA
+        run: npm run build --workspace=packages/admin-spa
+
+      - name: Stage app production dependencies
+        run: python3 tools/stage-app-deps.py . apps/hotshare-win
+
+      - name: Build Linux packages
+        working-directory: apps/hotshare-win
+        run: npx electron-builder --linux --publish never
+
+      - name: Rename artifacts for stable download URLs
+        shell: bash
+        working-directory: apps/hotshare-win/dist
+        run: |
+          shopt -s nullglob
+          for f in *.AppImage; do mv "$f" "hotshare-linux.AppImage"; done
+          for f in *.deb; do mv "$f" "hotshare-linux.deb"; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: apps/hotshare-win/dist
+
+  build-macos:
+    name: macOS disk image
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Download Electron binary
+        run: node node_modules/electron/install.js
+
+      - name: Compile TypeScript
+        working-directory: apps/hotshare-win
+        run: npx tsc
+
+      - name: Build admin SPA
+        run: npm run build --workspace=packages/admin-spa
+
+      - name: Stage app production dependencies
+        run: python3 tools/stage-app-deps.py . apps/hotshare-win
+
+      - name: Build macOS dmg
+        working-directory: apps/hotshare-win
+        # Unsigned (no Apple certs in CI) — users can right-click → Open past
+        # Gatekeeper. Add mac.identity + notarization later if needed.
+        run: npx electron-builder --mac --publish never
+
+      - name: Rename artifact for stable download URL
+        shell: bash
+        working-directory: apps/hotshare-win/dist
+        run: |
+          shopt -s nullglob
+          for f in *.dmg; do mv "$f" "hotshare-mac.dmg"; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: apps/hotshare-win/dist
 
   build-android:
     name: Android APK + AAB
@@ -126,7 +217,7 @@ jobs:
           fi
 
       - name: Build release APK + AAB
-        working-directory: apps/hotshare-android
+        working-directory: apps/hotshare-win/../../apps/hotshare-android
         env:
           # storeFile falls back to app/release.keystore (written above); only
           # the password/alias secrets are required to sign.
@@ -152,7 +243,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [build-windows, build-android]
+    needs: [build-windows, build-linux, build-macos, build-android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
