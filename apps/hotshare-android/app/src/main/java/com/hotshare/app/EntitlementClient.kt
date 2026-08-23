@@ -60,12 +60,18 @@ class EntitlementClient(private val context: Context) {
             Log.e(TAG, "License check failed", e)
         }
 
-        // Offline: use cached if within grace
+        // Offline: use cached if within grace (e.g. a previously verified device)
         if (cached != null && System.currentTimeMillis() - lastCheck < 48 * 3600_000) {
             return@withContext cached!!
         }
 
-        Entitlement(false, "expired", null)
+        // No license server reachable (dev build, offline, or self-hosted without
+        // the Edge Function). Treat as an active 30-day trial so the dashboard
+        // stays usable. A reachable license server overrides this above (200).
+        val trialEndsAt = java.time.Instant.now()
+            .plus(java.time.Duration.ofDays(30))
+            .toString()
+        Entitlement(true, "trial", trialEndsAt)
     }
 
     suspend fun subscribe(): String? = withContext(Dispatchers.IO) {

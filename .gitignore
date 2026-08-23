@@ -18,6 +18,9 @@ cache/
 apps/hotshare-android/app/build/
 local.properties
 
+# Android signing keystore (generated in CI / provided via secret — never commit)
+apps/hotshare-android/app/release.keystore
+
 # SQLite / runtime state
 *.db
 *.db-journal
@@ -29,5 +32,9 @@ state/
 # Secrets (never commit real keys)
 .env
 .env.*
+# Exception: the admin SPA build needs the *public* Supabase anon key baked in
+# at build time (it ships to clients anyway). The secret service-role key stays
+# in the gitignored .env / .env.local only.
+!packages/admin-spa/.env.production
 *.key.pem
 *.pem

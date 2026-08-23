@@ -58,9 +58,6 @@ jobs:
       # (electron-builder bundles it from there). Without this the packaged app
       # has no index.html and the dashboard shows "Not found".
       - name: Build admin SPA
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build --workspace=packages/admin-spa
 
       # electron-builder + npm workspaces bug (#7103): "installing production
@@ -119,9 +116,6 @@ jobs:
         run: npx tsc
 
       - name: Build admin SPA
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build --workspace=packages/admin-spa
 
       - name: Stage app production dependencies
@@ -169,9 +163,6 @@ jobs:
         run: npx tsc
 
       - name: Build admin SPA
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build --workspace=packages/admin-spa
 
       - name: Stage app production dependencies
@@ -252,9 +243,6 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'hotshare' }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'hotshare' }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'hotshare' }}
-          # Supabase vars consumed by the admin SPA build (run by gradle preBuild).
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: gradle assembleRelease bundleRelease
 
       - name: Copy artifacts for stable download URLs
