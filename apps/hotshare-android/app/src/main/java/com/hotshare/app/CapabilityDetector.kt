@@ -17,13 +17,23 @@ object CapabilityDetector {
     fun detect(context: Context): CapabilityResult {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
-        // Check STA+AP concurrency
+        // Check STA+AP concurrency for *tethering* (this app uses startSoftAp),
+        // not just local-only hotspot concurrency. Many devices support STA+AP
+        // for tethering but NOT for local-only connections, so checking only the
+        // local-only flag falsely reports "cannot run a hotspot with Wi-Fi on"
+        // and forces a cellular/ethernet fallback on phones that actually can
+        // share their Wi-Fi uplink.
         val staApSupported = try {
-            val method: Method = wifiManager.javaClass.getMethod("isStaConcurrencyForLocalOnlyConnectionsSupported")
+            val method = wifiManager.javaClass.getMethod("isStaApConcurrencySupported")
             method.invoke(wifiManager) as Boolean
         } catch (e: Exception) {
-            // Assume supported on Android 13+ (best effort)
-            Build.VERSION.SDK_INT >= 33
+            try {
+                val m2 = wifiManager.javaClass.getMethod("isStaConcurrencyForLocalOnlyConnectionsSupported")
+                m2.invoke(wifiManager) as Boolean
+            } catch (_: Exception) {
+                // Best effort: tethering STA+AP is generally available from 11+.
+                Build.VERSION.SDK_INT >= 30
+            }
         }
 
         // Check force-disconnect support
