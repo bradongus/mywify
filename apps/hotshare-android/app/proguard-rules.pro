@@ -6,6 +6,11 @@
 # Keep Ktor
 -keep class io.ktor.** { *; }
 
+# Keep Netty (Ktor's server engine). R8 will otherwise strip/obfuscate classes
+# Netty discovers reflectively, breaking the embedded server in release builds.
+-keep class io.netty.** { *; }
+-dontwarn io.netty.**
+
 # Keep kotlinx.serialization
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt

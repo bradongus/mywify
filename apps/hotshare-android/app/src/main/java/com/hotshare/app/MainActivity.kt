@@ -76,7 +76,26 @@ class MainActivity : AppCompatActivity() {
         requestRuntimePermissions()
         requestBatteryOptimizationExemption()
 
-        webView.loadUrl("http://127.0.0.1:8080")
+        lifecycleScope.launch {
+            try {
+                adminServer.awaitReady()
+                webView.loadUrl("http://127.0.0.1:8080")
+            } catch (e: Exception) {
+                // Surface the real startup failure instead of a silent
+                // ERR_CONNECTION_REFUSED so it's diagnosable on-device.
+                val msg = (e.message ?: e.toString()).replace("<", "&lt;").replace("&", "&amp;")
+                webView.loadDataWithBaseURL(
+                    null,
+                    """<html><body style="font-family:sans-serif;color:#fafafa;background:#0a0a0a;padding:24px">
+                    <h2>Dashboard server failed to start</h2>
+                    <pre style="white-space:pre-wrap;color:#f87171">$msg</pre>
+                    </body></html>""",
+                    "text/html",
+                    "UTF-8",
+                    null
+                )
+            }
+        }
 
         lifecycleScope.launch {
             val ent = entitlement.check()

@@ -13,7 +13,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.json.*
+import java.net.InetSocketAddress
+import java.net.Socket
 
 /**
  * Serves the admin dashboard + guest portal on Android with the same API
@@ -34,18 +37,39 @@ class AdminServer(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val servers = mutableListOf<EmbeddedServer<*, *>>()
+    private val serverReady = CompletableDeferred<Unit>()
+    private var dashboardStartError: String? = null
 
     fun start() {
         val module: Application.() -> Unit = { routingModule() }
         try {
             servers.add(embeddedServer(Netty, port = 8080, host = "127.0.0.1", module = module).start(wait = false))
         } catch (e: Exception) {
-            Log.e(TAG, "Dashboard server failed to start", e)
+            dashboardStartError = "Dashboard server (127.0.0.1:8080) failed to start: ${e.message}"
+            Log.e(TAG, dashboardStartError, e)
         }
         try {
             servers.add(embeddedServer(Netty, port = 80, host = "0.0.0.0", module = module).start(wait = false))
         } catch (e: Exception) {
             Log.w(TAG, "Guest portal on :80 unavailable (${e.message}) — guests cannot reach the portal.")
+        }
+
+        // Probe until the dashboard socket actually accepts connections, then
+        // signal readiness. Without this the WebView can race ahead of Netty's
+        // async bind and get ERR_CONNECTION_REFUSED on first load.
+        scope.launch {
+            repeat(50) {
+                if (isPortListening(8080)) {
+                    serverReady.complete(Unit)
+                    return@launch
+                }
+                delay(100)
+            }
+            if (!serverReady.isCompleted) {
+                serverReady.completeExceptionally(
+                    RuntimeException(dashboardStartError ?: "Dashboard server did not start listening on 127.0.0.1:8080 in time.")
+                )
+            }
         }
 
         // Start the Uplink Guard health monitor (tick is a no-op while the
@@ -65,6 +89,15 @@ class AdminServer(
         servers.clear()
         uplink.stopMonitor()
         scope.cancel()
+    }
+
+    /** Suspends until the dashboard server is accepting connections (or fails). */
+    suspend fun awaitReady() = serverReady.await()
+
+    private fun isPortListening(port: Int): Boolean = try {
+        Socket().use { s -> s.connect(InetSocketAddress("127.0.0.1", port), 200); true }
+    } catch (_: Exception) {
+        false
     }
 
     private fun Application.routingModule() {
