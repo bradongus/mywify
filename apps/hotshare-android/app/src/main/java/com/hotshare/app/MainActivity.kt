@@ -103,7 +103,11 @@ class MainActivity : AppCompatActivity() {
 
             if (ent.granted) {
                 val err = hotspot.start()
-                if (err != null) updateStatusText(err)
+                if (err != null) {
+                    updateStatusText(err)
+                } else if (hotspot.uplinkMode == "cellular") {
+                    updateStatusText("Hotspot is sharing your mobile data — keep mobile data on")
+                }
             } else {
                 showSubscribeScreen()
             }

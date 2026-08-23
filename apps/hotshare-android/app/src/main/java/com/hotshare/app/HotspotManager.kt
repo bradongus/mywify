@@ -18,6 +18,12 @@ class HotspotManager(
 ) {
     private var started = false
 
+    /** "wifi" when the device can keep its Wi-Fi client up (STA+AP), or
+     *  "cellular" when the hotspot must share the phone's mobile data
+     *  because the radio can't do STA + AP at once. */
+    var uplinkMode: String = "wifi"
+        private set
+
     fun isRunning(): Boolean = started && softAp.isRunning()
 
     suspend fun start(): String? {
@@ -27,8 +33,15 @@ class HotspotManager(
         }
 
         val capability = CapabilityDetector.detect(context)
-        if (!capability.staApSupported) {
-            return "This device cannot run a hotspot while connected to Wi-Fi."
+        // Devices without STA+AP concurrency can't keep their Wi-Fi client
+        // connected while the hotspot is on. Instead of refusing, we let the
+        // hotspot share the phone's *mobile data*: startSoftAp() tears down the
+        // Wi-Fi STA and the OS routes guest traffic through the cellular
+        // interface automatically.
+        val cellularUplink = !capability.staApSupported
+        uplinkMode = if (cellularUplink) "cellular" else "wifi"
+        if (cellularUplink) {
+            Log.i(TAG, "STA+AP unsupported — hotspot will use mobile data as uplink.")
         }
 
         val s = settings.get()

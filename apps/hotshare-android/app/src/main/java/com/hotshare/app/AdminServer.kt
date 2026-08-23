@@ -388,15 +388,22 @@ class AdminServer(
 
     // ── State views ──────────────────────────────────────────────────────────
 
-    private suspend fun deviceState(): Map<String, Any?> = mapOf(
-        "platform" to "android",
-        "hotspotActive" to hotspot.isRunning(),
-        "internetOk" to true,
-        "uplinkGuardEnabled" to uplink.isActive(),
-        "tunnelHealth" to uplinkHealth(),
-        "clientCount" to softAp.getClients().size,
-        "maxClients" to settings.get().maxClients,
-    )
+    private suspend fun deviceState(): Map<String, Any?> {
+        val cellular = hotspot.uplinkMode == "cellular"
+        return mapOf(
+            "platform" to "android",
+            "hotspotActive" to hotspot.isRunning(),
+            "internetOk" to true,
+            "uplinkMode" to hotspot.uplinkMode,
+            "uplinkWarning" to if (cellular)
+                "This device can't use Wi-Fi + hotspot together, so the hotspot shares your mobile data. Keep mobile data on."
+                else "",
+            "uplinkGuardEnabled" to uplink.isActive(),
+            "tunnelHealth" to uplinkHealth(),
+            "clientCount" to softAp.getClients().size,
+            "maxClients" to settings.get().maxClients,
+        )
+    }
 
     private fun uplinkHealth(): Map<String, Any?> {
         val h = uplink.health()
