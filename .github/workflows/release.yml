@@ -82,9 +82,20 @@ jobs:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: |
-          echo "$WIN_CSC_LINK" | base64 -d > "$RUNNER_TEMP/hotshare.pfx"
-          echo "CSC_LINK=$RUNNER_TEMP/hotshare.pfx" >> "$GITHUB_ENV"
-          echo "CSC_KEY_PASSWORD=$WIN_CSC_KEY_PASSWORD" >> "$GITHUB_ENV"
+          # Decode to a temp file first so a malformed secret can't fail the
+          # whole build. If the value isn't valid base64, build UNSIGNED and warn.
+          # Use a unix-style path (cygpath) so the backslashes in $RUNNER_TEMP
+          # don't break the file write / electron-builder lookup on Windows.
+          PFX_DIR="$(cygpath -u "$RUNNER_TEMP" 2>/dev/null || echo "$RUNNER_TEMP")"
+          PFX="$PFX_DIR/hotshare.pfx"
+          if echo "$WIN_CSC_LINK" | base64 -d > "$PFX.tmp" 2>/dev/null && [ -s "$PFX.tmp" ]; then
+            mv "$PFX.tmp" "$PFX"
+            echo "CSC_LINK=$PFX" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$WIN_CSC_KEY_PASSWORD" >> "$GITHUB_ENV"
+            echo "Code signing enabled."
+          else
+            echo "WARNING: WIN_CSC_LINK is set but is not valid base64 — building UNSIGNED."
+          fi
 
       - name: Build NSIS installer
         working-directory: apps/hotshare-win
