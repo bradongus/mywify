@@ -395,9 +395,11 @@ class AdminServer(
             "hotspotActive" to hotspot.isRunning(),
             "internetOk" to true,
             "uplinkMode" to hotspot.uplinkMode,
-            "uplinkWarning" to if (cellular)
-                "This device can't use Wi-Fi + hotspot together, so the hotspot shares your mobile data. Keep mobile data on."
-                else "",
+            "uplinkWarning" to when (hotspot.uplinkMode) {
+                "ethernet" -> "This device can't use Wi-Fi + hotspot together. Plug a USB-Ethernet adapter into the shop router to share that internet; otherwise mobile data is used."
+                "cellular" -> "This device can't use Wi-Fi + hotspot together, so the hotspot shares your mobile data. Keep mobile data on (or plug in USB-Ethernet to share the shop's internet)."
+                else -> ""
+            },
             "uplinkGuardEnabled" to uplink.isActive(),
             "tunnelHealth" to uplinkHealth(),
             "clientCount" to softAp.getClients().size,

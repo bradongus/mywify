@@ -1,6 +1,8 @@
 package com.hotshare.app
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 
 /**
@@ -26,6 +28,22 @@ class HotspotManager(
 
     fun isRunning(): Boolean = started && softAp.isRunning()
 
+    /**
+     * On devices that can't do STA+AP, the Wi-Fi client will be torn down when
+     * the hotspot starts. Pick the best remaining uplink: prefer a USB-Ethernet
+     * dongle (so we share the shop router's internet), else mobile data.
+     */
+    private fun resolveNonWifiUplink(): String {
+        return try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val net = cm.activeNetwork ?: return "cellular"
+            val caps = cm.getNetworkCapabilities(net) ?: return "cellular"
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) "ethernet" else "cellular"
+        } catch (_: Exception) {
+            "cellular"
+        }
+    }
+
     suspend fun start(): String? {
         val ent = entitlement.check()
         if (!ent.granted) {
@@ -34,14 +52,18 @@ class HotspotManager(
 
         val capability = CapabilityDetector.detect(context)
         // Devices without STA+AP concurrency can't keep their Wi-Fi client
-        // connected while the hotspot is on. Instead of refusing, we let the
-        // hotspot share the phone's *mobile data*: startSoftAp() tears down the
-        // Wi-Fi STA and the OS routes guest traffic through the cellular
-        // interface automatically.
-        val cellularUplink = !capability.staApSupported
-        uplinkMode = if (cellularUplink) "cellular" else "wifi"
-        if (cellularUplink) {
-            Log.i(TAG, "STA+AP unsupported — hotspot will use mobile data as uplink.")
+        // connected while the hotspot is on, so the shop's Wi-Fi can't be the
+        // uplink. Instead of refusing, we share the phone's other network:
+        //   - a USB-Ethernet dongle plugged into the shop router (preferred —
+        //     that genuinely shares the shop's internet), or
+        //   - mobile data (fallback).
+        // startSoftAp() tears down the Wi-Fi STA and the OS routes guest traffic
+        // through whatever non-Wi-Fi network is active.
+        if (!capability.staApSupported) {
+            uplinkMode = resolveNonWifiUplink()
+            Log.i(TAG, "STA+AP unsupported — hotspot will use $uplinkMode as uplink.")
+        } else {
+            uplinkMode = "wifi"
         }
 
         val s = settings.get()

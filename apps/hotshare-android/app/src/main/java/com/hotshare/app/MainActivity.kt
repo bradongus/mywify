@@ -105,8 +105,14 @@ class MainActivity : AppCompatActivity() {
                 val err = hotspot.start()
                 if (err != null) {
                     updateStatusText(err)
-                } else if (hotspot.uplinkMode == "cellular") {
-                    updateStatusText("Hotspot is sharing your mobile data — keep mobile data on")
+                } else {
+                    updateStatusText(
+                        when (hotspot.uplinkMode) {
+                            "ethernet" -> "Hotspot sharing the router's internet via USB-Ethernet"
+                            "cellular" -> "Hotspot is sharing your mobile data — keep mobile data on"
+                            else -> "Hotspot active (Wi-Fi uplink)"
+                        }
+                    )
                 }
             } else {
                 showSubscribeScreen()
