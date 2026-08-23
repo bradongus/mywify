@@ -11,6 +11,12 @@ name: Release
 #   ANDROID_KEY_ALIAS
 #   ANDROID_KEY_PASSWORD
 # Without them the Android job still succeeds but produces an UNSIGNED APK.
+#
+# Optional (removes the Windows "unknown publisher" SmartScreen warning):
+#   WIN_CSC_LINK          base64 of a code-signing .pfx (OV/EV cert from a CA,
+#                         or exported from Azure Trusted Signing)
+#   WIN_CSC_KEY_PASSWORD  password for that .pfx
+# When both are absent the Windows build stays UNSIGNED (current behavior).
 
 on:
   push:
@@ -69,10 +75,23 @@ jobs:
       - name: Stage app production dependencies
         run: python tools/stage-app-deps.py . apps/hotshare-win
 
+      - name: Configure Windows code signing
+        if: ${{ secrets.WIN_CSC_LINK != '' }}
+        shell: bash
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          echo "$WIN_CSC_LINK" | base64 -d > "$RUNNER_TEMP/hotshare.pfx"
+          echo "CSC_LINK=$RUNNER_TEMP/hotshare.pfx" >> "$GITHUB_ENV"
+          echo "CSC_KEY_PASSWORD=$WIN_CSC_KEY_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Build NSIS installer
         working-directory: apps/hotshare-win
         # --publish never: electron-builder would auto-publish on a tag and
         # fight the softprops release step below; it just assembles the exe.
+        # If CSC_LINK is set (above), electron-builder signs both the app exe
+        # and the NSIS installer with signtool, removing the "unknown publisher".
         run: npx electron-builder --win --publish never
 
       - name: Rename installer for stable download URL
