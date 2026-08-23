@@ -11,6 +11,13 @@ import { RendererServer } from './rendererServer';
 import { SettingsStore } from './settings';
 import { isLinux, isWindows, SUBNET, checkPrerequisites } from './platform';
 
+// Default the owner dashboard to skip the external license-server entitlement
+// check (no Edge Function required). Override with HOTSHARE_SKIP_ENTITLEMENT=0
+// to re-enable licensing enforcement.
+if (!process.env.HOTSHARE_SKIP_ENTITLEMENT) {
+  process.env.HOTSHARE_SKIP_ENTITLEMENT = '1';
+}
+
 // Single instance: a second launch must never fight over port 80 or the DB.
 // It focuses the already-running dashboard window instead and quits.
 if (!app.requestSingleInstanceLock()) {
