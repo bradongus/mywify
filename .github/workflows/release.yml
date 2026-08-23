@@ -76,12 +76,17 @@ jobs:
         run: python tools/stage-app-deps.py . apps/hotshare-win
 
       - name: Configure Windows code signing
-        if: ${{ secrets.WIN_CSC_LINK != '' }}
         shell: bash
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: |
+          # Always run, but no-op (build UNSIGNED) when the secret is absent.
+          # (GitHub Actions doesn't allow `secrets` in a step `if`, so we guard here.)
+          if [ -z "$WIN_CSC_LINK" ]; then
+            echo "No WIN_CSC_LINK secret set — building UNSIGNED."
+            exit 0
+          fi
           # Decode to a temp file first so a malformed secret can't fail the
           # whole build. If the value isn't valid base64, build UNSIGNED and warn.
           # Use a unix-style path (cygpath) so the backslashes in $RUNNER_TEMP
